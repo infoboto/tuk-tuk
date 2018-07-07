@@ -14,8 +14,12 @@
 #define LED 13
 #define S_DIR A0
 #define S_ESQ A7
-#define STOP_TIME 11
-// 25 de tempo com 80 de velocidade na pista oficial!
+#define FILTERS_SIZE 1
+#define RIGHT_NOTATION_NUM 6
+#define NOTATION_EXISTS_IF 500 
+
+unsigned int right_filters[FILTERS_SIZE] = {0}
+unsigned int right_notations = 0;
 
 // Constantes para PID
 float KP = 0.10;
@@ -44,7 +48,6 @@ int derivativo = 0;   // Derivativo
 int diferencial = 0; // Diferencia aplicada a los motores
 int last_prop;       // Última valor del proporcional (utilizado para calcular la derivada del error)
 int Target = 2500;   // Setpoint (Como utilizamos 6 sensores, la línea debe estar entre 0 y 5000, por lo que el ideal es que esté en 2500)
-
 
 unsigned long setup_time = 0;
 
@@ -168,7 +171,20 @@ void loop()
     
     (diferencial < 0) ? Motor(Velmax + diferencial, Velmax) : Motor(Velmax, Velmax - diferencial);
 
+    search_right_notation();
     stop();
+}
+
+void search_right_notation()
+{
+    filter_update(analogRead(S_DIR));
+    int value = filter_mean();
+
+    if(value < NOTATION_EXISTS_IF)
+    {
+        digitalWrite(LED, !digitalRead(LED));
+        right_notations = right_notations + 1;
+    }
 }
 
 int finish;
@@ -176,15 +192,29 @@ unsigned long seconds = 0;
 
 void stop()
 {                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                             
-  seconds = (millis() - setup_time) / 1000;
-  if((seconds) >= STOP_TIME)
+  if(right_notations == RIGHT_NOTATION_NUM)
   {
-    finish = analogRead(S_DIR);
-    
-    if(finish <= 500) {
-      freno(true, true, 255);
-      delay(20000);
-    }
+    freno(true, true, 255);
+    delay(20000);
   }  
+}
+
+int filter_mean()
+{
+    int sum = 0;
+    for(int i = 0; i < FILTERS_SIZE; i++)
+    {
+        sum = sum + right_filters[i];
+    }
+    return sum / FILTERS_SIZE;
+}
+
+void filter_update(const int value)
+{
+    for (int i = FILTERS_SIZE - 1; i > 0; i--)
+    {
+        right_filters[i] = right_filters[i-1];
+    }
+    right_filters[0] = value;
 }
 
