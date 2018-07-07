@@ -184,7 +184,7 @@ void search_right_notation()
       filter_update(analogRead(S_DIR));
       int current_mean = filter_mean();
   
-      if(value < NOTATION_EXISTS_IF)
+      if(current_mean < NOTATION_EXISTS_IF)
       {
           moment = millis();
           digitalWrite(LED, !digitalRead(LED));
