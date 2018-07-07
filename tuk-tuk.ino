@@ -14,11 +14,12 @@
 #define LED 13
 #define S_DIR A0
 #define S_ESQ A7
+
 #define FILTERS_SIZE 1
 #define RIGHT_NOTATION_NUM 6
 #define NOTATION_EXISTS_IF 500 
 
-unsigned int right_filters[FILTERS_SIZE] = {0}
+unsigned int right_filters[FILTERS_SIZE] = {0};
 unsigned int right_notations = 0;
 
 // Constantes para PID
@@ -131,7 +132,6 @@ void setup()
       delay(20);
     }
     delay(3000);
-    setup_time = millis();
 }
 
 
@@ -175,15 +175,21 @@ void loop()
     stop();
 }
 
+unsigned long moment = 0;
+
 void search_right_notation()
 {
-    filter_update(analogRead(S_DIR));
-    int value = filter_mean();
-
-    if(value < NOTATION_EXISTS_IF)
+    if(millis() >= moment + 250)
     {
-        digitalWrite(LED, !digitalRead(LED));
-        right_notations = right_notations + 1;
+      filter_update(analogRead(S_DIR));
+      int current_mean = filter_mean();
+  
+      if(value < NOTATION_EXISTS_IF)
+      {
+          moment = millis();
+          digitalWrite(LED, !digitalRead(LED));
+          right_notations = right_notations + 1;
+      }
     }
 }
 
