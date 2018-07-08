@@ -15,12 +15,12 @@
 #define S_DIR A0
 #define S_ESQ A7
 
-#define FILTERS_SIZE 1
+#define FILTERS_SIZE 10
 #define RIGHT_NOTATION_NUM 6
 #define NOTATION_EXISTS_IF 500 
 
 unsigned int right_filters[FILTERS_SIZE] = {0};
-unsigned int right_notations = 0;
+unsigned int left_filters[FILTERS_SIZE] = {0};
 
 // Constantes para PID
 float KP = 0.10;
@@ -171,51 +171,59 @@ void loop()
     
     (diferencial < 0) ? Motor(Velmax + diferencial, Velmax) : Motor(Velmax, Velmax - diferencial);
 
-    search_right_notation();
-    stop();
-}
-
-unsigned long moment = 0;
-
-void search_right_notation()
-{
-    if(millis() >= moment + 250)
-    {
-      filter_update(analogRead(S_DIR));
-      int current_mean = filter_mean();
-  
-      if(current_mean < NOTATION_EXISTS_IF)
-      {
-          moment = millis();
-          digitalWrite(LED, !digitalRead(LED));
-          right_notations = right_notations + 1;
-      }
-    }
+    filter_left_update(analogRead(S_ESQ));
+    filter_right_update(analogRead(S_DIR));
+    stop(millis());
 }
 
 int finish;
 unsigned long seconds = 0;
 
-void stop()
+unsigned long previousMillisDir = 0;
+const long intervalDir = 22000;
+
+void stop(long currentMillisChegada)
 {                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                             
-  if(right_notations == RIGHT_NOTATION_NUM)
-  {
-    freno(true, true, 255);
-    delay(20000);
-  }  
+    if (currentMillisChegada - previousMillisDir >= intervalDir)
+    {
+        if (filter_right_sum() < 7250 && filter_left_sum() > 8000)
+        {
+            Motor(0, 0);
+            delay(2000);
+        }
+    }
 }
 
-int filter_mean()
+int filter_right_sum()
 {
     int sum = 0;
     for(int i = 0; i < FILTERS_SIZE; i++)
     {
         sum = sum + right_filters[i];
     }
-    return sum / FILTERS_SIZE;
+    return sum;
 }
 
-void filter_update(const int value)
+int filter_left_sum()
+{
+    int sum = 0;
+    for(int i = 0; i < FILTERS_SIZE; i++)
+    {
+        sum = sum + left_filters[i];
+    }
+    return sum;
+}
+
+void filter_left_update(int value)
+{
+    for (int i = FILTERS_SIZE - 1; i > 0; i--)
+    {
+        left_filters[i] = left_filters[i-1];
+    }
+    left_filters[0] = value;
+}
+
+void filter_right_update(int value)
 {
     for (int i = FILTERS_SIZE - 1; i > 0; i--)
     {
